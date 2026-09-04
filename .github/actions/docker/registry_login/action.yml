@@ -21,15 +21,17 @@ runs:
     - name: Set registry type
       id: registry
       shell: bash
+      env:
+        REGISTRY: ${{ inputs.registry }}
       run: |
-        if [[ ${{ inputs.registry }} =~ ^.*-docker.pkg.dev.*$  ]]; then
-            echo "type=gcp" >> $GITHUB_OUTPUT
+        if [[ "$REGISTRY" =~ ^.*-docker.pkg.dev.*$ ]]; then
+            echo "type=gcp" >> "$GITHUB_OUTPUT"
         else
-            echo "type=dockerhub" >> $GITHUB_OUTPUT
+            echo "type=dockerhub" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Login to GCR
-      uses: docker/login-action@v3
+      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
       with:
         registry: ${{ inputs.registry }}
         username: _json_key_base64
@@ -37,7 +39,7 @@ runs:
       if: steps.registry.outputs.type == 'gcp'
 
     - name: Login to Docker Hub
-      uses: docker/login-action@v3
+      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
       with:
         username: ${{ inputs.dockerhub_login }}
         password: ${{ inputs.dockerhub_password }}
