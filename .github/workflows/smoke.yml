@@ -1,0 +1,90 @@
+name: smoke
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build_and_push:
+    name: build_and_push (${{ matrix.platforms }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platforms:
+          - linux/amd64
+          - linux/amd64,linux/arm64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Build without pushing
+        uses: $/.github/actions/docker/build_and_push
+        with:
+          registry: localhost:5000
+          image: smoke
+          context: tests/smoke
+          platforms: ${{ matrix.platforms }}
+          push: false
+          cache_from: type=gha
+          cache_to: type=gha,mode=max
+
+  check_if_image_exists:
+    name: check_if_image_exists
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Look up a tag that exists
+        id: present
+        uses: $/.github/actions/docker/check_if_image_exists
+        with:
+          image: docker.io/library/alpine
+          tag: "3.22"
+          arch: linux/amd64
+
+      - name: Look up a tag that does not exist
+        id: absent
+        uses: $/.github/actions/docker/check_if_image_exists
+        with:
+          image: docker.io/library/alpine
+          tag: "0.0.0-no-such-tag"
+          arch: linux/amd64
+
+      - name: Assert
+        env:
+          PRESENT: ${{ steps.present.outputs.exists }}
+          ABSENT: ${{ steps.absent.outputs.exists }}
+        run: |
+          test "$PRESENT" = "true"
+          test "$ABSENT" = "false"
+
+  get_head_commit_hash:
+    name: get_head_commit_hash (deprecated)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Resolve HEAD
+        id: hash
+        uses: $/.github/actions/docker/get_head_commit_hash
+        with:
+          path: .
+
+      - name: Assert
+        env:
+          HASH: ${{ steps.hash.outputs.hash }}
+        run: echo "$HASH" | grep -qE '^[0-9a-f]{40}$'
