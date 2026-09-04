@@ -1,4 +1,5 @@
 name: Build and Push Multi-arch Docker Image
+description: "Build a multi-arch image and push it to a GCP or Docker Hub registry"
 
 inputs:
   registry:
@@ -59,40 +60,48 @@ runs:
   using: "composite"
   steps:
   - name: Set up QEMU
-    uses: docker/setup-qemu-action@v3
+    uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
     if: ${{ contains(inputs.platforms, 'linux/arm64') }}
 
   - name: Set up Docker Buildx
-    uses: docker/setup-buildx-action@v3
+    uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
   - name: Set HEAD commit hash
     id: sha_tag
-    uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@main
-    with:
-      path: ${{ inputs.context }}
+    shell: bash
+    env:
+      CONTEXT_PATH: ${{ inputs.context }}
+    run: |
+      cd "$CONTEXT_PATH"
+      echo "hash=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
     if: ${{ inputs.sha_tag }}
 
   - name: Set cache values
     shell: bash
     id: cache
+    env:
+      CACHE_FROM_INPUT: ${{ inputs.cache_from }}
+      CACHE_TO_INPUT: ${{ inputs.cache_to }}
+      REGISTRY: ${{ inputs.registry }}
+      IMAGE: ${{ inputs.image }}
     run: |
-      CACHE_FROM="${{ inputs.cache_from }}"
-      CACHE_TO="${{ inputs.cache_to }}"
+      CACHE_FROM="$CACHE_FROM_INPUT"
+      CACHE_TO="$CACHE_TO_INPUT"
 
       if [ -z "$CACHE_FROM" ]; then
-        CACHE_FROM="type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:cache"
+        CACHE_FROM="type=registry,ref=$REGISTRY/$IMAGE:cache"
       fi
 
       if [ -z "$CACHE_TO" ]; then
-        CACHE_TO="type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:cache,mode=max"
+        CACHE_TO="type=registry,ref=$REGISTRY/$IMAGE:cache,mode=max"
       fi
 
-      echo "from=$CACHE_FROM" >> $GITHUB_OUTPUT
-      echo "to=$CACHE_TO" >> $GITHUB_OUTPUT
+      echo "from=$CACHE_FROM" >> "$GITHUB_OUTPUT"
+      echo "to=$CACHE_TO" >> "$GITHUB_OUTPUT"
 
   - name: Set image tags
     id: meta
-    uses: docker/metadata-action@v5
+    uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
     with:
       images: |
         ${{ inputs.registry }}/${{ inputs.image }}
@@ -103,7 +112,7 @@ runs:
 
   - name: Build and push image
     id: build
-    uses: docker/build-push-action@v6
+    uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
     with:
       push: ${{ inputs.push }}
       platforms: ${{ inputs.platforms }}

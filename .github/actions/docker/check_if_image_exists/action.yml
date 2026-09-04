@@ -21,10 +21,14 @@ runs:
   using: "composite"
   steps:
     - id: check_image
+      env:
+        IMAGE: ${{ inputs.image }}
+        TAG: ${{ inputs.tag }}
+        ARCH: ${{ inputs.arch }}
       run: |
-        if docker manifest inspect ${{ inputs.image }}:${{ inputs.tag }} | jq '.manifests[].platform | [.os, .architecture] | join("/")' | grep -qi "${{ inputs.arch }}"; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+        if docker manifest inspect "$IMAGE:$TAG" | jq '.manifests[].platform | [.os, .architecture] | join("/")' | grep -qi "$ARCH"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
         else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
         fi
       shell: bash

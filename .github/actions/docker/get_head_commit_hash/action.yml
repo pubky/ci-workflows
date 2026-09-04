@@ -1,5 +1,5 @@
 name: "Get HEAD commit hash"
-description: "Get HEAD commit hash"
+description: "Get HEAD commit hash. Deprecated: build_and_push resolves the hash itself"
 
 inputs:
   path:
@@ -14,7 +14,9 @@ runs:
   using: "composite"
   steps:
     - id: get_hash
+      env:
+        TARGET_PATH: ${{ inputs.path }}
       run: |
-        cd ${{ inputs.path }}
-        echo "value=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+        cd "$TARGET_PATH"
+        echo "value=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       shell: bash
