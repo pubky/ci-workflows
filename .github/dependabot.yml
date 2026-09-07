@@ -3,7 +3,10 @@ updates:
   - package-ecosystem: github-actions
     directories:
       - /
-      - /.github/actions/**
+      - /.github/actions/docker/build_and_push
+      - /.github/actions/docker/check_if_image_exists
+      - /.github/actions/docker/get_head_commit_hash
+      - /.github/actions/docker/registry_login
     schedule:
       interval: weekly
     cooldown:
