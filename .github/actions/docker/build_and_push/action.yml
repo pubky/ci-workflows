@@ -66,6 +66,9 @@ runs:
   - name: Set up Docker Buildx
     uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
+  - name: Install Cosign
+    uses: sigstore/cosign-installer@v3
+
   - name: Set HEAD commit hash
     id: sha_tag
     shell: bash
@@ -125,3 +128,49 @@ runs:
       labels: ${{ steps.meta.outputs.labels }}
       cache-from: ${{ steps.cache.outputs.from }}
       cache-to: ${{ steps.cache.outputs.to }}
+
+  # Use Fulcio public server for signing
+  - name: Sign Image
+    id: sign
+    shell: bash
+    if: ${{ steps.build.conclusion == 'success' }}
+    run: cosign sign --yes ${{ inputs.registry }}/${{ inputs.image }}@${{ steps.build.outputs.digest }}
+
+  - name: Verify Signature
+    id: verify
+    shell: bash
+    if: ${{ steps.sign.conclusion == 'success' }}
+    run: |
+      URL="${{github.server_url}}/${{ github.workflow_ref }}"
+      COSIGN_VERIFY_COMMAND=(
+                              cosign verify --output json
+                              --certificate-identity-regexp="$URL"
+                              --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
+                              ${{ inputs.registry }}/${{ inputs.image }}@${{ steps.build.outputs.digest }} 
+                            )
+      COSIGN_VERIFY_RESULT=$("${COSIGN_VERIFY_COMMAND[@]}")
+
+      echo "# Cosign Verification" >> $GITHUB_STEP_SUMMARY
+
+      if [ $? -eq 0 ]; then
+        echo "✅ **Cosign Signature Verified Successfully**" >> $GITHUB_STEP_SUMMARY
+        SUBJECT=$(echo "$COSIGN_VERIFY_RESULT" | jq -r '.[0].optional.Subject')
+        ISSUER=$(echo "$COSIGN_VERIFY_RESULT" | jq -r '.[0].optional.Issuer')
+        DIGEST=$(echo "$COSIGN_VERIFY_RESULT" | jq -r '.[0].critical.image."docker-manifest-digest"')
+        DOCKER_REFERENCE=$(echo "$COSIGN_VERIFY_RESULT" | jq -r '.[0].critical.identity."docker-reference"')
+
+        echo "**Subject:** $SUBJECT" >> $GITHUB_STEP_SUMMARY
+        echo "**Issuer:**  $ISSUER"  >> $GITHUB_STEP_SUMMARY
+        echo "**Digest:**  $DIGEST"  >> $GITHUB_STEP_SUMMARY
+        echo "**Docker Reference:** $DOCKER_REFERENCE" >> $GITHUB_STEP_SUMMARY
+        echo ""
+        echo "### Verify Locally" >> $GITHUB_STEP_SUMMARY
+        echo '```shell' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "${COSIGN_VERIFY_COMMAND[@]}" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+      else
+        echo "❌ **Cosign Signature Verification Failed**" >> $GITHUB_STEP_SUMMARY
+        echo "Verification failed for: $DIGEST" >> $GITHUB_STEP_SUMMARY
+        exit 1
+      fi
