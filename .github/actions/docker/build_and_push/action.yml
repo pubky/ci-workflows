@@ -96,8 +96,15 @@ runs:
         CACHE_TO="type=registry,ref=$REGISTRY/$IMAGE:cache,mode=max"
       fi
 
-      echo "from=$CACHE_FROM" >> "$GITHUB_OUTPUT"
-      echo "to=$CACHE_TO" >> "$GITHUB_OUTPUT"
+      DELIMITER="CACHE_EOF"
+      while [[ "$CACHE_FROM" == *"$DELIMITER"* || "$CACHE_TO" == *"$DELIMITER"* ]]; do
+        DELIMITER="${DELIMITER}_"
+      done
+
+      {
+        printf 'from<<%s\n%s\n%s\n' "$DELIMITER" "$CACHE_FROM" "$DELIMITER"
+        printf 'to<<%s\n%s\n%s\n' "$DELIMITER" "$CACHE_TO" "$DELIMITER"
+      } >> "$GITHUB_OUTPUT"
 
   - name: Set image tags
     id: meta
