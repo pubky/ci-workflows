@@ -46,6 +46,7 @@ inputs:
     type: string
     default: ""
   cache_to:
+    description: 'Cache export destinations; empty uses the registry default, "false" disables export'
     required: false
     type: string
     default: ""
@@ -92,7 +93,9 @@ runs:
         CACHE_FROM="type=registry,ref=$REGISTRY/$IMAGE:cache"
       fi
 
-      if [ -z "$CACHE_TO" ]; then
+      if [ "$CACHE_TO" = "false" ]; then
+        CACHE_TO=""
+      elif [ -z "$CACHE_TO" ]; then
         CACHE_TO="type=registry,ref=$REGISTRY/$IMAGE:cache,mode=max"
       fi
 

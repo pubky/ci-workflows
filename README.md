@@ -25,6 +25,18 @@ builds of every consuming repository, so read the policy below before opening a 
     context: .
 ```
 
+`cache_from` and `cache_to` accept newline-separated cache entries. Empty
+values use the image's registry cache (`$REGISTRY/$IMAGE:cache`), with
+`mode=max` for export. Set `cache_to: "false"` to disable cache export while
+still importing caches through `cache_from`:
+
+```yaml
+cache_from: |
+  type=gha,scope=docker-release-homeserver-amd64
+  type=gha,scope=docker-release-homeserver-arm64
+cache_to: "false"
+```
+
 ## Policy
 
 **Third-party actions are pinned to a commit SHA**, with the version in a trailing comment:
