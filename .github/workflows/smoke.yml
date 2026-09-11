@@ -36,6 +36,23 @@ jobs:
           cache_from: type=gha
           cache_to: type=gha,mode=max
 
+  build_and_push_no_cache:
+    name: build_and_push (no cache inputs)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Build with cache inputs omitted
+        uses: $/.github/actions/docker/build_and_push
+        with:
+          registry: localhost:5000
+          image: smoke
+          context: tests/smoke
+          push: false
+
   check_if_image_exists:
     name: check_if_image_exists
     runs-on: ubuntu-latest

@@ -25,6 +25,21 @@ builds of every consuming repository, so read the policy below before opening a 
     context: .
 ```
 
+`cache_from` and `cache_to` are passed straight to `docker/build-push-action` and
+accept newline-separated entries. **An unset input means no cache** — the action emits
+no `--cache-from` / `--cache-to` flag at all, exactly as `docker/build-push-action`
+behaves on its own. Caching is opt-in:
+
+```yaml
+cache_from: |
+  type=gha,scope=amd64
+  type=gha,scope=arm64
+cache_to: type=gha,mode=max
+```
+
+Exporting a cache is slow and is only worth it when a later build reads it. A release
+build usually has no such reader, so leaving `cache_to` unset is often the right choice.
+
 ## Policy
 
 **Third-party actions are pinned to a commit SHA**, with the version in a trailing comment:

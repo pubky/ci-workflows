@@ -42,10 +42,12 @@ inputs:
     type: boolean
     default: true
   cache_from:
+    description: "Cache sources, newline-separated. Unset means no cache import"
     required: false
     type: string
     default: ""
   cache_to:
+    description: "Cache export destinations, newline-separated. Unset means no cache export"
     required: false
     type: string
     default: ""
@@ -76,36 +78,6 @@ runs:
       echo "hash=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
     if: ${{ inputs.sha_tag }}
 
-  - name: Set cache values
-    shell: bash
-    id: cache
-    env:
-      CACHE_FROM_INPUT: ${{ inputs.cache_from }}
-      CACHE_TO_INPUT: ${{ inputs.cache_to }}
-      REGISTRY: ${{ inputs.registry }}
-      IMAGE: ${{ inputs.image }}
-    run: |
-      CACHE_FROM="$CACHE_FROM_INPUT"
-      CACHE_TO="$CACHE_TO_INPUT"
-
-      if [ -z "$CACHE_FROM" ]; then
-        CACHE_FROM="type=registry,ref=$REGISTRY/$IMAGE:cache"
-      fi
-
-      if [ -z "$CACHE_TO" ]; then
-        CACHE_TO="type=registry,ref=$REGISTRY/$IMAGE:cache,mode=max"
-      fi
-
-      DELIMITER="CACHE_EOF"
-      while [[ "$CACHE_FROM" == *"$DELIMITER"* || "$CACHE_TO" == *"$DELIMITER"* ]]; do
-        DELIMITER="${DELIMITER}_"
-      done
-
-      {
-        printf 'from<<%s\n%s\n%s\n' "$DELIMITER" "$CACHE_FROM" "$DELIMITER"
-        printf 'to<<%s\n%s\n%s\n' "$DELIMITER" "$CACHE_TO" "$DELIMITER"
-      } >> "$GITHUB_OUTPUT"
-
   - name: Set image tags
     id: meta
     uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
@@ -130,5 +102,5 @@ runs:
         ${{ inputs.build_args }}
         ${{ contains(inputs.platforms, 'linux/arm64') && 'TARGETARCH=aarch64' || ''}}
       labels: ${{ steps.meta.outputs.labels }}
-      cache-from: ${{ steps.cache.outputs.from }}
-      cache-to: ${{ steps.cache.outputs.to }}
+      cache-from: ${{ inputs.cache_from }}
+      cache-to: ${{ inputs.cache_to }}
