@@ -40,6 +40,32 @@ cache_to: type=gha,mode=max
 Exporting a cache is slow and is only worth it when a later build reads it. A release
 build usually has no such reader, so leaving `cache_to` unset is often the right choice.
 
+## Reusable workflows
+
+`context7-sync.yml` refreshes the calling repository's library in Context7. The library
+must already be registered in Context7. Add this workflow to each consuming repository:
+
+```yaml
+name: Sync to Context7
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  refresh-context7:
+    uses: pubky/ci-workflows/.github/workflows/context7-sync.yml@main
+    secrets:
+      CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+```
+
+Set `CONTEXT7_API_KEY` as a secret in the calling repository, or as an organization
+secret with access granted to that repository. The caller controls when the workflow
+runs; the shared workflow uses `github.repository` to select its Context7 library.
+
 ## Policy
 
 **Third-party actions are pinned to a commit SHA**, with the version in a trailing comment:
