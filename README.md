@@ -10,6 +10,8 @@ builds of every consuming repository, so read the policy below before opening a 
 | `docker/build_and_push` | Build a multi-arch image and push it to GCP Artifact Registry or Docker Hub |
 | `docker/registry_login` | Log in to either registry, chosen from the registry hostname |
 | `docker/check_if_image_exists` | Check whether a tag already exists for a given architecture |
+| `cloudrun/deploy` | Authenticate to GCP and deploy a Cloud Run service from a service YAML; outputs `url` |
+| `cloudrun/delete` | Authenticate to GCP and delete a Cloud Run service through the Admin API, without gcloud; a missing service is ignored by default |
 | `docker/get_head_commit_hash` | **Deprecated.** `build_and_push` resolves the hash itself |
 
 ```yaml

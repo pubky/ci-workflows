@@ -1,0 +1,55 @@
+name: "Delete Cloud Run service"
+description: "Authenticate to GCP with a service account key and delete a Cloud Run service via the Cloud Run Admin API (no gcloud required)"
+
+inputs:
+  gcp_service_account_key:
+    description: "Service account key JSON used to authenticate to GCP"
+    required: true
+  region:
+    description: "Cloud Run region"
+    required: true
+  service:
+    description: "Name of the Cloud Run service to delete"
+    required: true
+  project_id:
+    description: "GCP project ID (defaults to the project of the credentials)"
+    required: false
+    default: ""
+  ignore_not_found:
+    description: "Treat a missing service (HTTP 404) as success"
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Authenticate to GCP
+      id: auth
+      uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+      with:
+        credentials_json: ${{ inputs.gcp_service_account_key }}
+        token_format: access_token
+
+    - name: Delete Cloud Run service
+      shell: bash
+      env:
+        SERVICE: ${{ inputs.service }}
+        REGION: ${{ inputs.region }}
+        PROJECT: ${{ inputs.project_id || steps.auth.outputs.project_id }}
+        TOKEN: ${{ steps.auth.outputs.access_token }}
+        IGNORE_NOT_FOUND: ${{ inputs.ignore_not_found }}
+      run: |
+        set -euo pipefail
+        echo "::add-mask::$TOKEN"
+        code=$(curl -sS -X DELETE -o /tmp/delete.json -w '%{http_code}' \
+          -H "Authorization: Bearer $TOKEN" \
+          "https://run.googleapis.com/v2/projects/${PROJECT}/locations/${REGION}/services/${SERVICE}")
+        if [[ "$code" == 2* ]]; then
+          echo "Deleted Cloud Run service ${SERVICE} (HTTP ${code})"
+        elif [[ "$code" == 404 && "$IGNORE_NOT_FOUND" == "true" ]]; then
+          echo "Service ${SERVICE} not found, nothing to delete"
+        else
+          echo "::error::Delete failed (HTTP ${code})"
+          cat /tmp/delete.json
+          exit 1
+        fi
