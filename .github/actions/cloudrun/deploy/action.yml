@@ -1,0 +1,124 @@
+name: "Deploy to Cloud Run"
+description: "Authenticate to GCP with a service account key and deploy a Cloud Run service from a service YAML, an image, or source"
+
+inputs:
+  gcp_service_account_key:
+    description: "Service account key JSON used to authenticate to GCP"
+    required: true
+  region:
+    description: "Cloud Run region"
+    required: true
+  metadata:
+    description: "Path to the Cloud Run service YAML to deploy. Mutually exclusive with service/job/image/source"
+    required: false
+    default: ""
+  project_id:
+    description: "GCP project ID (defaults to the project of the credentials)"
+    required: false
+    default: ""
+  service:
+    description: "Name of the Cloud Run service (non-YAML deploy)"
+    required: false
+    default: ""
+  job:
+    description: "Name of the Cloud Run job (non-YAML deploy)"
+    required: false
+    default: ""
+  image:
+    description: "Container image to deploy"
+    required: false
+    default: ""
+  source:
+    description: "Path to source code to build and deploy"
+    required: false
+    default: ""
+  suffix:
+    description: "Revision name suffix"
+    required: false
+    default: ""
+  env_vars:
+    description: "Comma- or newline-separated KEY=VALUE environment variables"
+    required: false
+    default: ""
+  env_vars_file:
+    description: "Path to a file of environment variables"
+    required: false
+    default: ""
+  secrets:
+    description: "Comma- or newline-separated secrets (KEY=SECRET:VERSION)"
+    required: false
+    default: ""
+  secrets_file:
+    description: "Path to a file of secrets"
+    required: false
+    default: ""
+  labels:
+    description: "Comma- or newline-separated KEY=VALUE labels"
+    required: false
+    default: ""
+  skip_default_labels:
+    description: "Skip adding the default labels"
+    required: false
+    default: "false"
+  tag:
+    description: "Traffic tag to assign to the revision"
+    required: false
+    default: ""
+  timeout:
+    description: "Request timeout for the service"
+    required: false
+    default: ""
+  no_traffic:
+    description: "Deploy the revision without routing traffic to it"
+    required: false
+    default: "false"
+  revision_traffic:
+    description: "Comma-separated REVISION=PERCENT traffic split"
+    required: false
+    default: ""
+  tag_traffic:
+    description: "Comma-separated TAG=PERCENT traffic split"
+    required: false
+    default: ""
+  flags:
+    description: "Additional gcloud flags to pass to the deploy command"
+    required: false
+    default: ""
+
+outputs:
+  url:
+    description: "URL of the deployed Cloud Run service"
+    value: ${{ steps.deploy.outputs.url }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Authenticate to GCP
+      uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+      with:
+        credentials_json: ${{ inputs.gcp_service_account_key }}
+
+    - name: Deploy to Cloud Run
+      id: deploy
+      uses: google-github-actions/deploy-cloudrun@2028e2d7d30a78c6910e0632e48dd561b064884d # v3
+      with:
+        region: ${{ inputs.region }}
+        metadata: ${{ inputs.metadata }}
+        project_id: ${{ inputs.project_id }}
+        service: ${{ inputs.service }}
+        job: ${{ inputs.job }}
+        image: ${{ inputs.image }}
+        source: ${{ inputs.source }}
+        suffix: ${{ inputs.suffix }}
+        env_vars: ${{ inputs.env_vars }}
+        env_vars_file: ${{ inputs.env_vars_file }}
+        secrets: ${{ inputs.secrets }}
+        secrets_file: ${{ inputs.secrets_file }}
+        labels: ${{ inputs.labels }}
+        skip_default_labels: ${{ inputs.skip_default_labels }}
+        tag: ${{ inputs.tag }}
+        timeout: ${{ inputs.timeout }}
+        no_traffic: ${{ inputs.no_traffic }}
+        revision_traffic: ${{ inputs.revision_traffic }}
+        tag_traffic: ${{ inputs.tag_traffic }}
+        flags: ${{ inputs.flags }}
