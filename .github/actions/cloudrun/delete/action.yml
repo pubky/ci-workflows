@@ -1,5 +1,5 @@
 name: "Delete Cloud Run service"
-description: "Authenticate to GCP with a service account key and delete a Cloud Run service via the Cloud Run Admin API (no gcloud required)"
+description: "Authenticate to GCP with a service account key and delete a Cloud Run service via the Cloud Run Admin API"
 
 inputs:
   gcp_service_account_key:
@@ -28,7 +28,12 @@ runs:
       uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
       with:
         credentials_json: ${{ inputs.gcp_service_account_key }}
-        token_format: access_token
+
+    # gcloud mints the access token straight from the key. auth's
+    # token_format=access_token would instead call iam.serviceAccounts.getAccessToken,
+    # which needs roles/iam.serviceAccountTokenCreator on the service account itself.
+    - name: Set up gcloud
+      uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
 
     - name: Delete Cloud Run service
       shell: bash
@@ -36,12 +41,13 @@ runs:
         SERVICE: ${{ inputs.service }}
         REGION: ${{ inputs.region }}
         PROJECT: ${{ inputs.project_id || steps.auth.outputs.project_id }}
-        TOKEN: ${{ steps.auth.outputs.access_token }}
         IGNORE_NOT_FOUND: ${{ inputs.ignore_not_found }}
       run: |
         set -euo pipefail
+        TOKEN=$(gcloud auth print-access-token)
         echo "::add-mask::$TOKEN"
-        code=$(curl -sS -X DELETE -o /tmp/delete.json -w '%{http_code}' \
+        body="${RUNNER_TEMP}/delete.json"
+        code=$(curl -sS -X DELETE -o "$body" -w '%{http_code}' \
           -H "Authorization: Bearer $TOKEN" \
           "https://run.googleapis.com/v2/projects/${PROJECT}/locations/${REGION}/services/${SERVICE}")
         if [[ "$code" == 2* ]]; then
@@ -50,6 +56,6 @@ runs:
           echo "Service ${SERVICE} not found, nothing to delete"
         else
           echo "::error::Delete failed (HTTP ${code})"
-          cat /tmp/delete.json
+          cat "$body"
           exit 1
         fi
