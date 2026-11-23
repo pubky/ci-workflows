@@ -40,16 +40,8 @@ inputs:
     description: "Comma- or newline-separated KEY=VALUE environment variables"
     required: false
     default: ""
-  env_vars_file:
-    description: "Path to a file of environment variables"
-    required: false
-    default: ""
   secrets:
     description: "Comma- or newline-separated secrets (KEY=SECRET:VERSION)"
-    required: false
-    default: ""
-  secrets_file:
-    description: "Path to a file of secrets"
     required: false
     default: ""
   labels:
@@ -111,9 +103,7 @@ runs:
         source: ${{ inputs.source }}
         suffix: ${{ inputs.suffix }}
         env_vars: ${{ inputs.env_vars }}
-        env_vars_file: ${{ inputs.env_vars_file }}
         secrets: ${{ inputs.secrets }}
-        secrets_file: ${{ inputs.secrets_file }}
         labels: ${{ inputs.labels }}
         skip_default_labels: ${{ inputs.skip_default_labels }}
         tag: ${{ inputs.tag }}
